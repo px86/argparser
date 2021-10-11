@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = --std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS = --std=c++14 -Wall -Wextra -Werror -Wno-unused-parameter
 
 all: main
 
