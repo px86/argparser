@@ -1,7 +1,9 @@
 #ifndef ARGPARSE_H
 #define ARGPARSE_H
 
+#include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -106,23 +108,36 @@ inline void ArgParse::parse(const int argc, const char **argv) {
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
       // arg is an option
+      Option* opt { nullptr };
+      const char* val_for_parsing { nullptr };
+
       if (argv[i][1] == '-') {
 	// long option
+	size_t last_index = 1;
+	char last_char = argv[i][last_index];
+	while (last_char!='\0' && last_char!='=') last_char = argv[i][++last_index];
 	
-      }
-      else {
-	// short option
-        Option *opt { nullptr };
         for (int j = 0; j < (int)m_options.size(); ++j) {
-          if (m_options[j].short_name == argv[i][1]) {
+          if (!memcmp(m_options[j].long_name, argv[i]+2, last_index-2)) {
             opt = &m_options[j];
+	    val_for_parsing = last_char=='=' ? argv[i] + last_index + 1 : argv[++i];
             break;
           }
         }
-	if (!opt) { cerr << "Unknown option: " << argv[i] << endl; }
-        else if (opt->requires_argument) opt->accept_value(argv[i][2] ? argv[i] + 2 : argv[++i]);
-        else opt->accept_value(nullptr);
       }
+      else {
+	// short option
+        for (int j = 0; j < (int)m_options.size(); ++j) {
+          if (m_options[j].short_name == argv[i][1]) {
+            opt = &m_options[j];
+	    val_for_parsing = argv[i][2] ? argv[i] + 2 : argv[++i];
+            break;
+          }
+        }
+      }
+      if (!opt) { cerr << "Unknown option: " << argv[i] << endl; }
+      else if (opt->requires_argument) opt->accept_value(val_for_parsing);
+      else opt->accept_value(nullptr);
     }
   }
 }
