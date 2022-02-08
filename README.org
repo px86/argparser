@@ -1,0 +1,53 @@
+#+TITLE: ArgParser - A C++ header only command line arguments parsing library
+#+AUTHOR: Pushkar Raj
+
+* About
+
+=ArgParser= is a header only command line arguments parsing library, for C++ applications.
+
+* Installation
+
+Download and =#include= the =argparser.hpp= header file into your C++ application.
+
+* Usage
+
+Options can be passed in the following formats:
+
+1. =--key VAL=
+2. =--key=VAL=
+3. =-k VAL=
+4. =-kVAL=
+
+* Example
+
+#+begin_src cpp
+  #include "argparser.hpp"
+  #include <iostream>
+
+  int main(int argc, char **argv) {
+    bool flag = false;
+    int key = -1;
+    const char *filepath = nullptr;
+
+    pr::ArgParser ap;
+
+    ap.add_option(flag, "Switch on the flag", "flag", 'f');
+    ap.add_option(key, "Pass the secret key", "key", 'k');
+
+    ap.add_argument(filepath, "Path to file", "<filepath>");
+
+    ap.parse(argc, argv);
+
+    std::cout << "Path: " << filepath << '\n'
+              << "Key: "  << key << '\n'
+              << "flag: " << std::boolalpha << flag << std::endl;
+
+    return 0;
+  }
+#+end_src
+
+
+#+begin_src shell
+  make # compile
+  ./main -f inclue/argparser.hpp --key=42 # run
+#+end_src
