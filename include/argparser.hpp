@@ -57,7 +57,7 @@ class ArgParser {
 public:
   ArgParser() = default;
   void set_help_message(const char *message);
-  void parse(const int argc, const char **argv);
+  void parse(const int argc, char **argv);
 
   void add_option(Option &&);
   void add_option(bool &value, const char *help_msg, const char *long_name, char short_name);
@@ -111,7 +111,7 @@ inline void ArgParser::add_argument(const char *&value, const char *help_msg, co
   m_positional_arguments.push_back(std::move(arg));
 }
 
-inline void ArgParser::parse(const int argc, const char **argv)
+inline void ArgParser::parse(const int argc, char **argv)
 {
   for (int i=1; i<argc; ++i) {
     // Long named options.
