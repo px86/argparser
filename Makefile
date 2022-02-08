@@ -1,10 +1,8 @@
 CXX = g++
-CXXFLAGS = --std=c++14 -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS = -Wall -Werror -Wpedantic -std=c++17 -Iinclude
 
-all: main
-
-main: main.cpp include/ArgParse.hpp
-	$(CXX) $(CXXFLAGS) -o $@ main.cpp
+main: main.cpp include/argparser.hpp
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LIBS)
 
 clean:
-	rm -f main
+	rm -rf *.o main

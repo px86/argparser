@@ -1,27 +1,35 @@
-
-#include "include/ArgParse.hpp"
 #include <iostream>
+#include "include/argparser.hpp"
 
 using namespace std;
 
-
 int main(int argc, const char** argv) {
-  // initialize with default values
-  int key = -1;
-  bool flag = false;
-  double ratio = -1;
 
-  PR::ArgParse argparse;
+  // Variables initialized with default values.
+  bool var_bool = false;
+  double var_double = 0.0;
+  int var_int = -1;
+  const char *var_charpointer = "";
+  int parg_int = -100;
 
-  argparse.add_option(key, "Pass secret key as integer", "key", 'k');
-  argparse.add_option(flag, "Flag bit", "flag", 'f');
-  argparse.add_option(ratio, "Pass ratio as double", "ratio", 'r');
+  // Initialize argument parser.
+  pr::ArgParser ap;
 
-  argparse.parse(argc, argv);
+  ap.add_option(var_bool, "Switch the bool flag", "bool", 'b');
+  ap.add_option(var_int, "Value for int", "int", 'i');
+  ap.add_option(var_double, "Value for double", "double", 'd');
 
-  cout << "Flag  is: " << flag << endl;
-  cout << "Ratio is: " << ratio << endl;
-  cout << "Secret key is: " << key << endl;
+  ap.add_argument(var_charpointer, "Provide file path", "<filepath>");
+  ap.add_argument(parg_int, "Integer argument", "<integer>");
+
+  // Parse the arguments.
+  ap.parse(argc, argv);
+
+  std::cout << "BOOL " << var_bool << '\n'
+	    << "INT "  << var_int << '\n'
+	    << "DOUBLE "  << var_double << '\n'
+	    << "Path1 "   << var_charpointer << '\n'
+    	    << "Arg Int " << parg_int << '\n';
 
   return 0;
 }
