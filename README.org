@@ -1,4 +1,4 @@
-#+TITLE: ArgParser - A C++ header only command line arguments parsing library
+#+TITLE: ArgParser - A header only command line arguments parsing library for C++
 #+AUTHOR: Pushkar Raj
 
 * About
@@ -18,10 +18,13 @@ Options can be passed in the following formats:
 3. =-k VAL=
 4. =-kVAL=
 
+Note: currently sticking multiple short options together is not supported.
+
 * Example
 
 #+begin_src cpp
   #include "argparser.hpp"
+  #include <ios>
   #include <iostream>
 
   int main(int argc, char **argv) {
@@ -29,7 +32,8 @@ Options can be passed in the following formats:
     int key = -1;
     const char *filepath = nullptr;
 
-    pr::ArgParser ap;
+    // Initialize the argument parser with the program name.
+    auto ap = pr::ArgParser("example");
 
     ap.add_option(flag, "Switch on the flag", "flag", 'f');
     ap.add_option(key, "Pass the secret key", "key", 'k');
@@ -38,7 +42,8 @@ Options can be passed in the following formats:
 
     ap.parse(argc, argv);
 
-    std::cout << "Path: " << filepath << '\n'
+    std::cout << "After parsing the arguments:\n"
+              << "Path: " << filepath << '\n'
               << "Key: "  << key << '\n'
               << "flag: " << std::boolalpha << flag << std::endl;
 
@@ -48,6 +53,6 @@ Options can be passed in the following formats:
 
 
 #+begin_src shell
-  make # compile
-  ./main -f inclue/argparser.hpp --key=42 # run
+  make
+  ./main -f --key=32 ./test.cpp
 #+end_src
