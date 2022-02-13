@@ -93,8 +93,8 @@ public:
   void add_option(Option &&);
   void add_option(bool &value, const char *help_msg, const char *long_name, char short_name);
   void add_option(int &value, const char *help_msg, const char *long_name, char short_name);
-  void add_option(unsigned &value, const char *help_msg, const char *long_name, char short_name);
   void add_option(double &value, const char *help_msg, const char *long_name, char short_name);
+  void add_option(const char *&value, const char *help_msg, const char *long_name, char short_name);
 
   void add_argument(Argument &&);
   void add_argument(int &value, const char *help_msg, const char *name);
@@ -148,6 +148,14 @@ inline void ArgParser::add_option(double &value, const char *help_msg,
 		 std::exit(EXIT_FAILURE);
 	       }
 	     });
+  m_options.push_back(std::move(opt));
+}
+
+inline void ArgParser::add_option(const char *&value, const char *help_msg,
+                                  const char *long_name, char short_name)
+{
+  verify_names(long_name, short_name);
+  Option opt(true, help_msg, long_name, short_name, [&value](const char* arg) {value = arg;});
   m_options.push_back(std::move(opt));
 }
 
