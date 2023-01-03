@@ -1,9 +1,11 @@
-#+TITLE: ArgParser - A header only command line arguments parsing library for C++
+#+TITLE: argparser - A header only command line arguments parsing library for C++17
 #+AUTHOR: Pushkar Raj
 
 * About
 
-=ArgParser= is a header only command line arguments parsing library, for C++ applications.
+=argparser= is a header only command line arguments parsing library, for C++17 and later.
+
+NOTE: this is the development branch, so expect bugs, and abrupt changes in the api.
 
 * Installation
 
@@ -15,8 +17,9 @@ Options can be passed in the following formats:
 
 1. =--key VAL=
 2. =--key=VAL=
-3. =-k VAL=
-4. =-kVAL=
+3. =-k=VAL=
+4. =-k VAL=
+5. =-kVAL= - BUG: program crashes
 
 Note: currently sticking multiple short options together is not supported.
 
@@ -24,35 +27,51 @@ Note: currently sticking multiple short options together is not supported.
 
 #+begin_src cpp
   #include "argparser.hpp"
-  #include <ios>
+  #include <array>
+  #include <cstdlib>
   #include <iostream>
 
-  int main(int argc, char **argv) {
-    bool flag = false;
-    int key = -1;
-    const char *filepath = nullptr;
+  int main(int argc, char** argv)
+  {
+      // Initialize static variables with default value.
+      static bool flag = false;
+      static int key = 0;
+      static double ratio = 0.0;
+      static const char* filepath = "";
 
-    // Initialize the argument parser with the program name.
-    auto ap = pr::ArgParser("example");
+      static constexpr auto options = std::array {
+          pr::opt("flag", 'f', "set the flag to true", &flag),
+          pr::opt("key", 'k', "key value (int)", &key),
+          pr::opt("ratio", 'r', "ratio (double)", &ratio),
+          pr::opt("file", 'p', "ratio (double)", &filepath),
+      };
 
-    ap.add_option(flag, "Switch on the flag", "flag", 'f');
-    ap.add_option(key, "Pass the secret key", "key", 'k');
+      pr::init<options>();
 
-    ap.add_argument(filepath, "Path to file", "<filepath>");
+      std::cout << "Default Values\n"
+                << "flag=" << flag << '\n'
+                << "key=" << key << '\n'
+                << "ratio=" << ratio << '\n'
+                << "filepath=" << filepath << '\n'
+                << std::endl;
 
-    ap.parse(argc, argv);
+      pr::parse<options>(argc, argv);
 
-    std::cout << "After parsing the arguments:\n"
-              << "Path: " << filepath << '\n'
-              << "Key: "  << key << '\n'
-              << "flag: " << std::boolalpha << flag << std::endl;
+      std::cout << "After Parsing\n"
+                << "flag=" << flag << '\n'
+                << "key=" << key << '\n'
+                << "ratio=" << ratio << '\n'
+                << "filepath=" << filepath
+                << std::endl;
 
-    return 0;
+      return EXIT_SUCCESS;
   }
 #+end_src
 
 
-#+begin_src shell
-  make
-  ./main -f --key=32 ./test.cpp
-#+end_src
+* Notes
+
+- TODO: add =--help= option
+- TODO: give helpful error messages, when invalid arguments are passed
+- TODO: find better name for functions (e.g. pr::init)
+- TODO: change namespace name
