@@ -43,7 +43,7 @@ Note: currently sticking multiple short options together is not supported.
           pr::opt("flag", 'f', "set the flag to true", &flag),
           pr::opt("key", 'k', "key value (int)", &key),
           pr::opt("ratio", 'r', "ratio (double)", &ratio),
-          pr::opt("file", 'p', "ratio (double)", &filepath),
+          pr::opt("file", 'p', "path to a file", &filepath),
       };
 
       pr::init<options>();
@@ -71,7 +71,7 @@ Note: currently sticking multiple short options together is not supported.
 
 * Notes
 
-- TODO: add =--help= option
-- TODO: give helpful error messages, when invalid arguments are passed
+- +TODO: add =--help= option+
+- +TODO: give helpful error messages, when invalid arguments are passed+
 - TODO: find better name for functions (e.g. pr::init)
-- TODO: change namespace name
+- +TODO: change namespace name+

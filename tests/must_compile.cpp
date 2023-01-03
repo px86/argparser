@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     ap::opt("flag", 'f', "set the flag to true", &flag),
     ap::opt("key", 'k', "key value (int)", &key),
     ap::opt("ratio", 'r', "ratio (double)", &ratio),
-    ap::opt("file", 'p', "ratio (double)", &filepath),
+    ap::opt("file", 'p', "path to a file", &filepath),
   };
 
   ap::init<options>();

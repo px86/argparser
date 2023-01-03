@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     ap::opt("fla\tg\n", 'f', "set the flag to true", &flag),  // whitespace in name
     ap::opt("key\r ", 'k', "key value (int)", &key),          // whitespace in name
     ap::opt("rat io", 'r', "ratio (double)", &ratio),         // whitespace in name
-    ap::opt("file", 'h', "ratio (double)", &filepath),
+    ap::opt("file", 'p', "path to a file", &filepath),
   };
 
   ap::init<options>();
