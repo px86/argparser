@@ -15,56 +15,66 @@ Download and =#include= the =argparser.hpp= header file into your C++ applicatio
 
 Options can be passed in the following formats:
 
-1. =--key VAL=
-2. =--key=VAL=
-3. =-k=VAL=
-4. =-k VAL=
-5. =-kVAL= - BUG: program crashes
-
-Note: currently sticking multiple short options together is not supported.
++ =--key VAL=
++ =-k VAL=
 
 * Example
 
 #+begin_src cpp
-  #include "argparser.hpp"
+  #include "../include/argparser.hpp"
+
   #include <array>
   #include <cstdlib>
+  #include <iomanip>
   #include <iostream>
+  #include <numeric>
+  #include <vector>
 
-  int main(int argc, char** argv)
+  int main(int argc, char* argv[])
   {
-      // Initialize static variables with default value.
-      static bool flag = false;
-      static int key = 0;
-      static double ratio = 0.0;
-      static const char* filepath = "";
+    // STEP 1 - Initialize static variables with default value
+    static bool flag = false;
+    static int key = 0;
+    static const char* filepath = nullptr;
 
-      static constexpr auto options = std::array {
-          pr::opt("flag", 'f', "set the flag to true", &flag),
-          pr::opt("key", 'k', "key value (int)", &key),
-          pr::opt("ratio", 'r', "ratio (double)", &ratio),
-          pr::opt("file", 'p', "path to a file", &filepath),
-      };
+    // Declare the variable as std::array to accept fixed number of arguments
+    static auto ratios = std::array<double, 3>{};
 
-      pr::init<options>();
+    // Declare the variable as std::vector to accept variable number of arguments
+    // (args are pushed back at the end of the vector)
+    static auto numbers_to_add = std::vector<int>{};
 
-      std::cout << "Default Values\n"
-                << "flag=" << flag << '\n'
-                << "key=" << key << '\n'
-                << "ratio=" << ratio << '\n'
-                << "filepath=" << filepath << '\n'
-                << std::endl;
+    // STEP 2 - Define the options into a static constexpr std::array
+    static constexpr auto options = std::array{
+      ap::opt("flag", 'f', "set the flag to true", &flag),
+      ap::opt("key", 'k', "key value (int)", &key),
+      ap::opt("path", 'p', "path to a file", &filepath),
+      ap::opt("ratios", 0, "pass 3 doubles", &ratios),
+      ap::opt("sum", 's', "pass integers to add (mark end of arguments with --)", &numbers_to_add),
+    };
 
-      pr::parse<options>(argc, argv);
+    // STEP 3 - Initialize and call the parse member function
+    ap::argparser<options>::parse(argc, argv);
 
-      std::cout << "After Parsing\n"
-                << "flag=" << flag << '\n'
-                << "key=" << key << '\n'
-                << "ratio=" << ratio << '\n'
-                << "filepath=" << filepath
-                << std::endl;
 
-      return EXIT_SUCCESS;
+    std::cout << "flag = " << std::boolalpha << flag << '\n';
+    std::cout << "key = " << key << '\n';
+
+    std::cout << "ratios = { ";
+    for (auto x : ratios) {
+      std::cout << x << " ";
+    }
+    std::cout << "}\n";
+
+    std::cout << "numbers_to_add = { ";
+    for (auto x : numbers_to_add) {
+      std::cout << x << " ";
+    }
+    std::cout << "}\n";
+
+    std::cout << "sum is " << std::accumulate(numbers_to_add.cbegin(), numbers_to_add.cend(), 0) << std::endl;
+
+    return EXIT_SUCCESS;
   }
 #+end_src
 
@@ -73,5 +83,5 @@ Note: currently sticking multiple short options together is not supported.
 
 - +TODO: add =--help= option+
 - +TODO: give helpful error messages, when invalid arguments are passed+
-- TODO: find better name for functions (e.g. pr::init)
+- +TODO: find better name for functions (e.g. pr::init)+
 - +TODO: change namespace name+

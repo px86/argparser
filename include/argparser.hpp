@@ -1,12 +1,15 @@
-#pragma once
+#ifndef PX86_ARGPARSER_HPP
+#define PX86_ARGPARSER_HPP
 
+#include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
-#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 namespace ap {
 
@@ -15,7 +18,9 @@ namespace helper {
   constexpr bool strequal(const char* a, const char* b)
   {
     for (; (*a != 0) || (*b != 0);) {
-      if (*a++ != *b++) { return false; }
+      if (*a++ != *b++) {
+        return false;
+      }
     }
     return true;
   }
@@ -24,26 +29,21 @@ namespace helper {
   {
     // NB: no nullptr checking!
     const char* end = start;
-    for (; *end != '\0'; ++end) {}
+    for (; *end != '\0'; ++end) {
+    }
     return (std::size_t)(end - start);
   }
 
-  // descriptive error codes
-  enum class ErrorCode : int {
-    MULTIPLE_OPTIONS_HAVE_SAME_LONG_NAME = 1,
-    MULTIPLE_OPTIONS_HAVE_SAME_SHORT_NAME,
-    NAME_RESERVED_FOR_HELP_OPTION,
-    WHITESPACE_IN_LONG_NAME,
-    BOTH_NAMES_ARE_INVALID,
-    UNKNOWN_OPTION
-  };
-
   constexpr bool starts_with(const char* prefix, const char* arg)
   {
-    if (prefix == nullptr || arg == nullptr) { return false; }
+    if (prefix == nullptr || arg == nullptr) {
+      return false;
+    }
     int i = 0;
     while (prefix[i] != '\0') {
-      if (prefix[i] != arg[i]) { return false; }
+      if (prefix[i] != arg[i]) {
+        return false;
+      }
       ++i;
     }
     return true;
@@ -55,43 +55,29 @@ namespace helper {
   {
     if (lname != nullptr && starts_with(lname, arg + 2)) {
       auto name_len = const_strlen(lname);
-      if (arg[2 + name_len] == '=' || arg[2 + name_len] == '\0') { return true; }
+      if (arg[2 + name_len] == '=' || arg[2 + name_len] == '\0') {
+        return true;
+      }
     }
     return false;
   }
 
-  constexpr bool names_are_valid(const char* lname, char sname = '\0')
+  inline constexpr bool match_short_name(char sname, const char* arg)
   {
-    // return true if lname is valid. If lname is nullptr, check
-    // if sname is valid. If none of these conditions are statisfied
-    // call std::exit(1) and terminate the program.
-
-    if (lname != nullptr) {
-      int i = 0;
-      while (lname[i] != '\0') {
-        switch (lname[i]) {
-        case ' ':
-        case '\t':
-        case '\n':
-        case '\f':
-        case '\r':
-          std::exit((int)ErrorCode::WHITESPACE_IN_LONG_NAME);  // Error: option name contains whitespace
-        }
-        ++i;
-      }
-      return true;
-    } else if (sname != '\0') {
-      return true;
+    if (sname != '\0' && arg[1] != '\0') {
+      return sname == arg[1];
     }
-
-    std::exit((int)ErrorCode::BOTH_NAMES_ARE_INVALID);  // Error: invalid option names
+    return false;
   }
 
+  // FIXME: Not used right now
   constexpr auto has_equalsign(const char* arg) -> const char*
   {
     // return pointer to the (non-null) char right after the (first) '=' char,
     // if no '=' is present, or if it is the last char in the str, return nullptr
-    if (arg == nullptr) { return nullptr; }
+    if (arg == nullptr) {
+      return nullptr;
+    }
     int i = 0;
     while (arg[i] != '\0') {
       if (arg[i] == '=') {
@@ -110,26 +96,35 @@ namespace helper {
 
 namespace value_parser {
 
-  // function pointer to value parser functions
-  using VPFunc = void (*)(void*, const char*);
+  using VPFunc = char** (*)(void*, char**);
+  using helper::starts_with;
+  using helper::strequal;
 
-  void vp_bool(void* ptr, const char* /*arg*/) { *reinterpret_cast<bool*>(ptr) = true; }
+  template <typename T>
+  auto parse_single(const char* arg) -> T;
 
-  void vp_int(void* ptr, const char* arg)
+  template <>
+  inline auto parse_single<bool>(const char* /*arg*/) -> bool
+  {
+    return true;
+  }
+
+  template <>
+  auto parse_single<int>(const char* arg) -> int
   {
     try {
-      if (helper::starts_with("0x", arg)) {
-        // hexadecimal integer, set base as 16
-        *reinterpret_cast<int*>(ptr) = std::stoi(arg, nullptr, 16);
-      } else if (helper::starts_with("0", arg)) {
-        // octal integer, set base as 8
-        *reinterpret_cast<int*>(ptr) = std::stoi(arg, nullptr, 8);
+      if (starts_with("0x", arg)) {
+        // hexadecimal
+        return std::stoi(arg, nullptr, 16);
+      } else if (starts_with('0', arg)) {
+        // octal
+        return std::stoi(arg, nullptr, 8);
       } else {
-        // decimal integer, base is 10
-        *reinterpret_cast<int*>(ptr) = std::stoi(arg);
+        // decimal
+        return std::stoi(arg);
       }
-
     } catch (const std::invalid_argument& ex) {
+      // TODO: throw custom exception, and don't exit here
       std::cerr << "invalid_argument: '" << arg << "' can not be parsed into int\n";
       std::exit(EXIT_FAILURE);
     } catch (const std::out_of_range& ex) {
@@ -138,11 +133,13 @@ namespace value_parser {
     }
   }
 
-  void vp_double(void* ptr, const char* arg)
+  template <>
+  auto parse_single<double>(const char* arg) -> double
   {
     try {
-      *reinterpret_cast<double*>(ptr) = std::stod(arg);
+      return std::stod(arg);
     } catch (const std::invalid_argument& ex) {
+      // TODO: throw custom exception, and don't exit here
       std::cerr << "invalid_argument: '" << arg << "' can not be parsed into double\n";
       std::exit(EXIT_FAILURE);
     } catch (const std::out_of_range& ex) {
@@ -151,13 +148,139 @@ namespace value_parser {
     }
   }
 
-  void vp_const_char_ptr(void* ptr, const char* arg) { *reinterpret_cast<const char**>(ptr) = arg; }
+  template <>
+  inline auto parse_single<const char*>(const char* arg) -> const char*
+  {
+    // TODO: check for nullptr
+    return arg;
+  }
+
+  template <typename T, std::size_t N>
+  auto parse_n(void* dest, char** argv) -> char**
+  {
+    T* ptr = reinterpret_cast<T*>(dest);
+
+    int values_parsed = 0;
+    while (values_parsed != N) {
+      if (*argv == nullptr) {
+        // TODO: add some flexibility here
+        throw std::invalid_argument("insufficient aguments provided");
+      }
+      *ptr = parse_single<T>(*argv);
+      ++argv;
+      ++ptr;
+      ++values_parsed;
+    }
+    return argv;
+  }
+
+  template <>
+  auto parse_n<bool, 0>(void* dest, char** argv) -> char**
+  {
+    *reinterpret_cast<bool*>(dest) = true;
+    return argv;
+  }
+
+  template <typename T>
+  auto parse_any(void* dest, char** argv) -> char**
+  {
+    // 'dest' must be a pointer to std::vector type
+    auto ptr = reinterpret_cast<std::vector<T>*>(dest);
+
+    while (*argv != nullptr) {
+      if (strequal("--", *argv)) {
+        return ++argv;
+      }
+      ptr->push_back(parse_single<T>(*argv));
+      ++argv;
+    }
+    return argv;
+  }
 
 }  // namespace value_parser
 
+namespace checks {
+
+  using helper::strequal;
+  using OptionNamePair = std::pair<const char*, char>;
+
+  constexpr bool names_are_valid(const char* lname, char sname)
+  {
+    // return true if the non-nullptr/non-null names are valid
+    // altest one of them must be valid
+    if (lname != nullptr) {
+      int i = 0;
+      while (lname[i] != '\0') {
+        switch (lname[i]) {
+        case ' ':
+        case '\t':
+        case '\n':
+        case '\f':
+        case '\r':
+          // long name contains whitespace
+          return false;
+        }
+        ++i;
+      }
+      return true;
+    } else if (sname != '\0') {
+      // TODO: check if sname is a valid char
+      return true;
+    }
+
+    // both names are invalid
+    return false;
+  }
+
+  template <auto& OptionsArray>
+  constexpr bool all_names_are_valid()
+  {
+    for (const auto& optn : OptionsArray) {
+      if (!names_are_valid(optn.long_name, optn.short_name)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <auto& OptionsArray>
+  constexpr bool names_are_unique()
+  {
+    auto size = OptionsArray.size();
+    const char* lname = nullptr;
+    char sname = 0;
+
+    for (auto i = 0UL; i < size; ++i) {
+      lname = OptionsArray[i].long_name;
+      sname = OptionsArray[i].short_name;
+
+      for (auto j = i + 1; j < size; ++j) {
+        if (lname != nullptr && strequal(lname, OptionsArray[j].long_name)) {
+          return false;
+        }
+        if (sname != '\0' && sname == OptionsArray[j].short_name) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  template <auto& OptionsArray>
+  constexpr bool help_is_reserved()
+  {
+    for (const auto& optn : OptionsArray) {
+      if (strequal("help", optn.long_name)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+}  // namespace checks
+
 namespace impl {
 
-  using helper::names_are_valid;
   using value_parser::VPFunc;
 
   struct Option {
@@ -168,7 +291,7 @@ namespace impl {
     VPFunc parser_func{ nullptr };
     int nargs{ 0 };
 
-    void parse(const char* arg) const { this->parser_func(this->ptr, arg); }
+    auto parse(char** argv) const -> char** { return this->parser_func(this->ptr, argv); }
 
     constexpr Option() = default;
     constexpr Option(const char* lname, char sname, const char* help, void* ptr, VPFunc func, int nargs)
@@ -178,9 +301,7 @@ namespace impl {
       , ptr(ptr)
       , parser_func(func)
       , nargs(nargs)
-    {
-      names_are_valid(lname, sname);  // calls std::exit if names are invalid
-    }
+    {}
 
     constexpr Option(const Option&) = default;
     constexpr Option(Option&&) = default;
@@ -192,87 +313,53 @@ namespace impl {
 
 }  // namespace impl
 
-namespace helper {
-
-  template <auto& OptionsArray>
-  constexpr bool names_are_unique()
-  {
-    auto opts = OptionsArray.data();
-    auto size = OptionsArray.size();
-    const char* lname = nullptr;
-    char sname = 0;
-    for (auto i = 0UL; i < size; ++i) {
-      lname = opts[i].long_name;
-      sname = opts[i].short_name;
-
-      if (match_long_name(lname, "help")) {
-        std::exit((int)ErrorCode::NAME_RESERVED_FOR_HELP_OPTION);  // Error: --help is reserved for help option
-      }
-
-      for (auto j = i + 1; j < size; ++j) {
-        if (strequal(opts[j].long_name, lname)) {
-          std::exit(
-            (int)ErrorCode::MULTIPLE_OPTIONS_HAVE_SAME_LONG_NAME);  // Error: Two options have the same long names.
-        } else if (opts[j].short_name == sname) {
-          std::exit(
-            (int)ErrorCode::MULTIPLE_OPTIONS_HAVE_SAME_SHORT_NAME);  // Error: Two options have the same short names.
-        }
-      }
-    }
-    return true;
-  }
-
-}  // namespace helper
-
 namespace impl {
 
   namespace vp = value_parser;
+  using checks::names_are_valid;
 
   template <typename T>
-  constexpr Option opt(const char*, char, const char*, T*, int = 1);
-
-  template <>
-  constexpr Option opt<int>(const char* lname, char sname, const char* help, int* val, int nargs)
+  constexpr Option opt(const char* lname, char sname, const char* help, T* dest)
   {
-    return Option(lname, sname, help, val, vp::vp_int, nargs);
+    if (!names_are_valid(lname, sname)) {
+      throw std::invalid_argument("Option has invalid name(s)");
+    }
+    return Option(lname, sname, help, (void*)dest, vp::parse_n<T, 1>, 1);
   }
 
   template <>
-  constexpr Option opt<bool>(const char* lname, char sname, const char* help, bool* val, int /*nargs*/)
+  constexpr Option opt<bool>(const char* lname, char sname, const char* help, bool* dest)
   {
-    // nargs for bool options will always be 0.
-    return Option(lname, sname, help, val, vp::vp_bool, 0);
+    if (!names_are_valid(lname, sname)) {
+      throw std::invalid_argument("Option has invalid name(s)");
+    }
+    // bool always accepts zero arguments
+    return Option(lname, sname, help, (void*)dest, vp::parse_n<bool, 0>, 0);
   }
 
-  template <>
-  constexpr Option opt<double>(const char* lname, char sname, const char* help, double* val, int nargs)
+  template <typename T, std::size_t N>
+  constexpr Option opt(const char* lname, char sname, const char* help, std::array<T, N>* dest)
   {
-    return Option(lname, sname, help, val, vp::vp_double, nargs);
+    if (!names_are_valid(lname, sname)) {
+      throw std::invalid_argument("Option has invalid name(s)");
+    }
+    return Option(lname, sname, help, (void*)dest, vp::parse_n<T, N>, N);
   }
 
-  template <>
-  constexpr Option opt<const char*>(const char* lname, char sname, const char* help, const char** val, int nargs)
+  template <typename T>
+  constexpr Option opt(const char* lname, char sname, const char* help, std::vector<T>* dest)
   {
-    return Option(lname, sname, help, val, vp::vp_const_char_ptr, nargs);
+    if (!names_are_valid(lname, sname)) {
+      throw std::invalid_argument("Option has invalid name(s)");
+    }
+    return Option(lname, sname, help, (void*)dest, vp::parse_any<T>, -1);
   }
 
 }  // namespace impl
 
 namespace helper {
 
-  // force computation to be done at compile time
-  template <bool B>
-  struct force_compute {
-    static constexpr bool value = B;
-  };
-
-  template <auto& OptionsArray>
-  constexpr bool init()
-  {
-    // verify if all options have unique names
-    return force_compute<names_are_unique<OptionsArray>()>::value;
-  }
-
+  // TODO: print better help messages, utilizing the nargs attribute
   template <auto& OptionsArray>
   void print_help_message()
   {
@@ -292,7 +379,9 @@ namespace helper {
         strm << "  -" << opt.short_name;
       }
 
-      if (opt.nargs == 1) { strm << " VAL"; }
+      if (opt.nargs == 1) {
+        strm << " VAL";
+      }
 
       auto opt_str = strm.str();
 
@@ -308,75 +397,63 @@ namespace helper {
     std::cout.setf(std::ios_base::right, std::ios_base::adjustfield);
   }
 
+  // FIXME: why did I do this?
   template <typename CharType>
   void print_unknow_option_message(CharType arg)
   {
     std::cout << "Error: unknown option '" << arg << "'" << std::endl;
-    std::exit((int)ErrorCode::UNKNOWN_OPTION);
+    std::exit(1);
   }
 
 }  // namespace helper
 
 namespace impl {
 
-  using helper::has_equalsign;
+  using checks::help_is_reserved;
+  using checks::names_are_unique;
   using helper::match_long_name;
+  using helper::match_short_name;
   using helper::print_help_message;
   using helper::print_unknow_option_message;
-  using helper::starts_with;
+  using helper::strequal;
 
   template <auto& OptionsArray>
-  void parse(int argc, char* argv[])
-  {
-    for (int argv_indx = 1; argv_indx < argc; ++argv_indx) {
-      const char* arg = argv[argv_indx];
-      bool optn_found = false;
+  struct argparser {
 
-      // long options, --key=val, --key val
-      if (starts_with("--", arg)) {
-        if (match_long_name("help", arg)) {
-          // call print_help_message and die
+    static_assert(names_are_unique<OptionsArray>(), "Option names are not unique!");
+    static_assert(help_is_reserved<OptionsArray>(), "Option name 'help' is reserved for help message!");
+
+    static void parse(int /*argc*/, char** argv)
+    {
+      assert(argv != nullptr);
+      ++argv;  // argv[0] is program name
+      while (*argv != nullptr) {
+        if (strequal("--help", *argv)) {
           print_help_message<OptionsArray>();
           std::exit(EXIT_SUCCESS);
         }
-
+        bool optn_found = false;
         for (const auto& optn : OptionsArray) {
-          if (!match_long_name(optn.long_name, arg)) { continue; }
-          if (optn.nargs) {
-            auto t = has_equalsign(arg);
-            t != nullptr ? optn.parse(t) : optn.parse(argv[++argv_indx]);
-          } else {
-            optn.parse(nullptr);
-          }
-          optn_found = true;
-          break;
-        }
-        if (!optn_found) { print_unknow_option_message(arg); }
-      }
-      // short option, -k=val, -k val
-      else if (starts_with('-', arg)) {
-        for (const auto& optn : OptionsArray) {
-          if (optn.short_name && starts_with(optn.short_name, arg + 1)) {
-            if (optn.nargs) {
-              arg[2] == '=' ? optn.parse(arg + 3) : optn.parse(argv[++argv_indx]);
-            } else {
-              optn.parse(nullptr);
-            }
+          if (match_long_name(optn.long_name, *argv) || match_short_name(optn.short_name, *argv)) {
+            argv = optn.parse(++argv);
             optn_found = true;
             break;
           }
         }
-        if (!optn_found) { print_unknow_option_message(arg); }
-      } else {
-        // Positional argument (not implemented yet!)
+        if (!optn_found) {
+          // TODO: handle positional aguments
+          print_unknow_option_message(*argv);
+          std::exit(EXIT_FAILURE);
+        }
       }
     }
-  }
+  };
 
 }  // namespace impl
 
-using helper::init;
+using impl::argparser;
 using impl::opt;
-using impl::parse;
 
 }  // namespace ap
+
+#endif
